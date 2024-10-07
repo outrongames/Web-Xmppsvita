@@ -5,27 +5,51 @@
   <title>XMPP Client for PS Vita</title>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <link rel="stylesheet" type="text/css" href="style.css">
+  <!-- Incluindo Strophe.js via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/strophe.js/1.4.2/strophe.min.js"></script>
   <script type="text/javascript">
     var conn = null;
 
+    function log(msg) {
+      console.log(msg);
+      var chatbox = document.getElementById("chatbox");
+      chatbox.innerHTML += "<p>" + msg + "</p>";
+    }
+
     function loginXMPP() {
-      var username = document.getElementById("username").value;
+      var jid = document.getElementById("jid").value;
       var password = document.getElementById("password").value;
-      var domain = document.getElementById("domain").value;
 
-      conn = new Strophe.Connection("wss://" + domain + "/ws");
+      if (!jid || !password) {
+        alert("Por favor, preencha todos os campos.");
+        return;
+      }
 
-      conn.connect(username, password, function (status) {
+      // Pegando o domínio diretamente do JID
+      var domain = jid.split('@')[1];
+
+      log("Tentando logar com JID: " + jid);
+
+      // Configurando a conexão ao servidor XMPP via WebSocket usando o domínio do JID
+      var wsUrl = "wss://" + domain + "/ws";  // Assumindo que o servidor usa WebSocket
+
+      conn = new Strophe.Connection(wsUrl);
+
+      log("Conectando ao servidor XMPP...");
+
+      conn.connect(jid, password, function (status) {
         if (status === Strophe.Status.CONNECTED) {
-          document.getElementById("login-form").style.display = "none"; // Esconde o formulário de login
-          document.getElementById("chat").style.display = "block";     // Mostra o chat
-          document.getElementById("chatbox").innerHTML += "<p>Conectado como " + username + "!</p>";
+          log("Conexão bem-sucedida!");
+          document.getElementById("login-form").style.display = "none";  // Esconde o formulário de login
+          document.getElementById("chat").style.display = "block";      // Mostra o chat
           conn.addHandler(onMessage, null, 'message', null, null, null);
-          conn.send($pres().tree());
+          conn.send($pres().tree());  // Envia a presença para o servidor XMPP
         } else if (status === Strophe.Status.DISCONNECTED) {
-          document.getElementById("chatbox").innerHTML += "<p>Desconectado.</p>";
+          log("Desconectado do servidor.");
         } else if (status === Strophe.Status.AUTHFAIL) {
-          document.getElementById("chatbox").innerHTML += "<p>Falha na autenticação. Verifique seu nome de usuário e senha.</p>";
+          log("Falha na autenticação. Verifique seu nome de usuário e senha.");
+        } else {
+          log("Status da conexão: " + status);
         }
       });
     }
@@ -38,7 +62,8 @@
         var message = $msg({to: recipient, type: 'chat'}).c("body").t(msg);
         conn.send(message.tree());
 
-        document.getElementById("chatbox").innerHTML += "<p>Você: " + msg + "</p>";
+        log("Mensagem enviada para " + recipient + ": " + msg);
+
         document.getElementById("message").value = "";
       } else {
         alert("Preencha todos os campos antes de enviar a mensagem.");
@@ -48,8 +73,10 @@
     function onMessage(msg) {
       var from = msg.getAttribute('from');
       var body = msg.getElementsByTagName('body')[0].textContent;
-      document.getElementById("chatbox").innerHTML += "<p>" + from + ": " + body + "</p>";
-      return true;
+
+      log("Mensagem recebida de " + from + ": " + body);
+
+      return true;  // Continue a receber mensagens
     }
   </script>
 </head>
@@ -59,9 +86,8 @@
   <!-- Formulário de Login -->
   <div id="login-form">
     <h2>Login XMPP</h2>
-    <input type="text" id="username" placeholder="Usuário (user@domain)" /><br>
+    <input type="text" id="jid" placeholder="JID (e.g., user@domain.com)" /><br> <!-- JID com o domínio embutido -->
     <input type="password" id="password" placeholder="Senha" /><br>
-    <input type="text" id="domain" placeholder="Servidor XMPP (e.g., domain.com)" /><br>
     <button type="button" onclick="loginXMPP();">Login</button>
     <div id="chatbox"></div>
   </div>
@@ -74,13 +100,5 @@
     <input type="text" id="message" placeholder="Escreva sua mensagem" /><br>
     <button type="button" onclick="sendMessage();">Enviar</button>
   </div>
-
-  <!-- Flash para multimídia (mesmo código) -->
-  <h2>Multimídia</h2>
-  <object type="application/x-shockwave-flash" data="your-flash-file.swf" width="400" height="300">
-    <param name="movie" value="your-flash-file.swf" />
-    <param name="quality" value="high" />
-    <p>Flash player is required to view this content.</p>
-  </object>
 </body>
 </html>
