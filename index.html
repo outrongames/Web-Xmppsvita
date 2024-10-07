@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>XMPP Client for PS Vita</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script type="text/javascript">
+    var conn = null;
+
+    function loginXMPP() {
+      var username = document.getElementById("username").value;
+      var password = document.getElementById("password").value;
+      var domain = document.getElementById("domain").value;
+
+      conn = new Strophe.Connection("wss://" + domain + "/ws");
+
+      conn.connect(username, password, function (status) {
+        if (status === Strophe.Status.CONNECTED) {
+          document.getElementById("login-form").style.display = "none"; // Esconde o formulário de login
+          document.getElementById("chat").style.display = "block";     // Mostra o chat
+          document.getElementById("chatbox").innerHTML += "<p>Conectado como " + username + "!</p>";
+          conn.addHandler(onMessage, null, 'message', null, null, null);
+          conn.send($pres().tree());
+        } else if (status === Strophe.Status.DISCONNECTED) {
+          document.getElementById("chatbox").innerHTML += "<p>Desconectado.</p>";
+        } else if (status === Strophe.Status.AUTHFAIL) {
+          document.getElementById("chatbox").innerHTML += "<p>Falha na autenticação. Verifique seu nome de usuário e senha.</p>";
+        }
+      });
+    }
+
+    function sendMessage() {
+      var msg = document.getElementById("message").value;
+      var recipient = document.getElementById("recipient").value;
+
+      if (msg && recipient) {
+        var message = $msg({to: recipient, type: 'chat'}).c("body").t(msg);
+        conn.send(message.tree());
+
+        document.getElementById("chatbox").innerHTML += "<p>Você: " + msg + "</p>";
+        document.getElementById("message").value = "";
+      } else {
+        alert("Preencha todos os campos antes de enviar a mensagem.");
+      }
+    }
+
+    function onMessage(msg) {
+      var from = msg.getAttribute('from');
+      var body = msg.getElementsByTagName('body')[0].textContent;
+      document.getElementById("chatbox").innerHTML += "<p>" + from + ": " + body + "</p>";
+      return true;
+    }
+  </script>
+</head>
+<body>
+  <h1>PS Vita XMPP Client</h1>
+
+  <!-- Formulário de Login -->
+  <div id="login-form">
+    <h2>Login XMPP</h2>
+    <input type="text" id="username" placeholder="Usuário (user@domain)" /><br>
+    <input type="password" id="password" placeholder="Senha" /><br>
+    <input type="text" id="domain" placeholder="Servidor XMPP (e.g., domain.com)" /><br>
+    <button type="button" onclick="loginXMPP();">Login</button>
+    <div id="chatbox"></div>
+  </div>
+
+  <!-- Chat (escondido até logar) -->
+  <div id="chat" style="display: none;">
+    <h2>Conversa</h2>
+    <div id="chatbox" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll;"></div>
+    <input type="text" id="recipient" placeholder="Destinatário (e.g., user@domain)" /><br>
+    <input type="text" id="message" placeholder="Escreva sua mensagem" /><br>
+    <button type="button" onclick="sendMessage();">Enviar</button>
+  </div>
+
+  <!-- Flash para multimídia (mesmo código) -->
+  <h2>Multimídia</h2>
+  <object type="application/x-shockwave-flash" data="your-flash-file.swf" width="400" height="300">
+    <param name="movie" value="your-flash-file.swf" />
+    <param name="quality" value="high" />
+    <p>Flash player is required to view this content.</p>
+  </object>
+</body>
+</html>
